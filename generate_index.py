@@ -145,8 +145,9 @@ def generate_index(repo_root: Path, output_file: Path, max_cves: int = None):
     cves.sort(key=lambda x: x['cveId'], reverse=True)
     
     # Create index object
+    from datetime import datetime
     index = {
-        'generated': str(Path.ctime(output_file)) if output_file.exists() else '',
+        'generated': datetime.now().isoformat(),
         'totalCount': len(cves),
         'cves': cves
     }
