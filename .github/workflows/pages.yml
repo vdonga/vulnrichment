@@ -35,8 +35,8 @@ jobs:
       
       - name: Generate CVE Index
         run: |
-          echo "Generating CVE index (limiting to 5000 for GitHub Pages)..."
-          python3 generate_index.py 5000
+          echo "Generating CVE index with all CVEs..."
+          python3 generate_index.py
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
