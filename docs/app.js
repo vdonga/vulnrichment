@@ -1,0 +1,303 @@
+// Global state
+let allCVEs = [];
+let filteredCVEs = [];
+let currentPage = 1;
+let pageSize = 50;
+let sortColumn = 'cveId';
+let sortDirection = 'desc';
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', async () => {
+    setupEventListeners();
+    await loadCVEData();
+});
+
+// Setup event listeners
+function setupEventListeners() {
+    // Search
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+    
+    // Filters
+    document.getElementById('yearFilter').addEventListener('change', applyFilters);
+    document.getElementById('severityFilter').addEventListener('change', applyFilters);
+    document.getElementById('exploitFilter').addEventListener('change', applyFilters);
+    document.getElementById('kevFilter').addEventListener('change', applyFilters);
+    
+    // Pagination
+    document.getElementById('prevPage').addEventListener('click', () => changePage(-1));
+    document.getElementById('nextPage').addEventListener('click', () => changePage(1));
+    document.getElementById('pageSize').addEventListener('change', (e) => {
+        pageSize = parseInt(e.target.value);
+        currentPage = 1;
+        renderTable();
+    });
+    
+    // Table sorting
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+            const column = th.getAttribute('data-sort');
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'desc';
+            }
+            sortData();
+            renderTable();
+        });
+    });
+}
+
+// Load CVE data from index
+async function loadCVEData() {
+    try {
+        showLoading(true);
+        
+        // Try to load the index file
+        const response = await fetch('cve-index.json');
+        if (!response.ok) {
+            throw new Error('Index file not found. Please generate it first.');
+        }
+        
+        const index = await response.json();
+        allCVEs = index.cves || [];
+        
+        // Populate year filter
+        populateYearFilter();
+        
+        // Initial display
+        filteredCVEs = [...allCVEs];
+        sortData();
+        updateStats();
+        renderTable();
+        
+        showLoading(false);
+    } catch (error) {
+        console.error('Error loading CVE data:', error);
+        showError(error.message);
+    }
+}
+
+// Populate year filter dropdown
+function populateYearFilter() {
+    const years = [...new Set(allCVEs.map(cve => {
+        const match = cve.cveId.match(/CVE-(\d{4})/);
+        return match ? match[1] : null;
+    }).filter(Boolean))].sort().reverse();
+    
+    const yearFilter = document.getElementById('yearFilter');
+    years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearFilter.appendChild(option);
+    });
+}
+
+// Apply filters
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const yearFilter = document.getElementById('yearFilter').value;
+    const severityFilter = document.getElementById('severityFilter').value;
+    const exploitFilter = document.getElementById('exploitFilter').value;
+    const kevOnly = document.getElementById('kevFilter').checked;
+    
+    filteredCVEs = allCVEs.filter(cve => {
+        // Search filter
+        if (searchTerm) {
+            const searchableText = `${cve.cveId} ${cve.description} ${cve.vendor} ${cve.product}`.toLowerCase();
+            if (!searchableText.includes(searchTerm)) return false;
+        }
+        
+        // Year filter
+        if (yearFilter) {
+            const cveYear = cve.cveId.match(/CVE-(\d{4})/)?.[1];
+            if (cveYear !== yearFilter) return false;
+        }
+        
+        // Severity filter
+        if (severityFilter && cve.severity !== severityFilter) return false;
+        
+        // Exploitation filter
+        if (exploitFilter) {
+            if (exploitFilter === 'active' && cve.exploitation !== 'active') return false;
+            if (exploitFilter === 'poc' && cve.exploitation !== 'poc') return false;
+            if (exploitFilter === 'none' && cve.exploitation !== 'none') return false;
+        }
+        
+        // KEV filter
+        if (kevOnly && !cve.isKEV) return false;
+        
+        return true;
+    });
+    
+    currentPage = 1;
+    sortData();
+    updateStats();
+    renderTable();
+}
+
+// Sort data
+function sortData() {
+    filteredCVEs.sort((a, b) => {
+        let aVal = a[sortColumn];
+        let bVal = b[sortColumn];
+        
+        // Handle null/undefined values
+        if (aVal == null) aVal = '';
+        if (bVal == null) bVal = '';
+        
+        // Convert to comparable types
+        if (sortColumn === 'score') {
+            aVal = parseFloat(aVal) || 0;
+            bVal = parseFloat(bVal) || 0;
+        } else if (sortColumn === 'published') {
+            aVal = new Date(aVal);
+            bVal = new Date(bVal);
+        }
+        
+        let comparison = 0;
+        if (aVal > bVal) comparison = 1;
+        if (aVal < bVal) comparison = -1;
+        
+        return sortDirection === 'asc' ? comparison : -comparison;
+    });
+}
+
+// Render table
+function renderTable() {
+    const tbody = document.getElementById('cveTableBody');
+    tbody.innerHTML = '';
+    
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const pageData = filteredCVEs.slice(start, end);
+    
+    if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No CVEs found matching your filters.</td></tr>';
+        updatePaginationControls();
+        return;
+    }
+    
+    pageData.forEach(cve => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+            <td class="cve-id">${cve.cveId}</td>
+            <td>
+                <span class="severity-badge severity-${cve.severity || 'NONE'}">
+                    ${cve.severity || 'N/A'}
+                </span>
+            </td>
+            <td class="cvss-score">${cve.score || 'N/A'}</td>
+            <td>${cve.vendor ? `${cve.vendor}${cve.product ? ' / ' + cve.product : ''}` : 'N/A'}</td>
+            <td class="description" title="${escapeHtml(cve.description || 'No description available')}">${escapeHtml(truncate(cve.description, 100))}</td>
+            <td class="exploit-status">${formatExploitation(cve.exploitation)}</td>
+            <td>${formatDate(cve.published)}</td>
+            <td>${cve.isKEV ? '<span class="kev-badge">KEV</span>' : ''}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    updatePaginationControls();
+}
+
+// Update statistics
+function updateStats() {
+    document.getElementById('totalCount').textContent = allCVEs.length.toLocaleString();
+    document.getElementById('filteredCount').textContent = filteredCVEs.length.toLocaleString();
+    document.getElementById('loadedCount').textContent = allCVEs.length.toLocaleString();
+}
+
+// Update pagination controls
+function updatePaginationControls() {
+    const totalPages = Math.ceil(filteredCVEs.length / pageSize);
+    
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
+    document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+}
+
+// Change page
+function changePage(delta) {
+    const totalPages = Math.ceil(filteredCVEs.length / pageSize);
+    const newPage = currentPage + delta;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        renderTable();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// Show/hide loading indicator
+function showLoading(show) {
+    const loading = document.getElementById('loading');
+    const table = document.querySelector('.table-container');
+    const pagination = document.querySelector('.pagination');
+    
+    if (show) {
+        loading.classList.remove('hidden');
+        table.style.display = 'none';
+        pagination.style.display = 'none';
+    } else {
+        loading.classList.add('hidden');
+        table.style.display = 'block';
+        pagination.style.display = 'flex';
+    }
+}
+
+// Show error message
+function showError(message) {
+    const loading = document.getElementById('loading');
+    loading.innerHTML = `
+        <div style="color: var(--critical); padding: 40px;">
+            <h2>⚠️ Error Loading Data</h2>
+            <p>${message}</p>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                Please ensure you have generated the <code>cve-index.json</code> file by running the Python script.
+            </p>
+        </div>
+    `;
+}
+
+// Utility functions
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function truncate(str, length) {
+    if (!str) return 'No description available';
+    return str.length > length ? str.substring(0, length) + '...' : str;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatExploitation(exploitation) {
+    if (!exploitation) return 'Unknown';
+    const labels = {
+        'active': '🔴 Active',
+        'poc': '🟡 PoC',
+        'none': '🟢 None'
+    };
+    return labels[exploitation] || exploitation;
+}

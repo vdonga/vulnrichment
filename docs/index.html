@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CISA Vulnrichment Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ CISA Vulnrichment Viewer</h1>
+            <p class="subtitle">Browse and search CVE vulnerability data enriched by CISA</p>
+        </header>
+
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search CVE ID, description, vendor..." />
+            </div>
+            
+            <div class="filters">
+                <select id="yearFilter">
+                    <option value="">All Years</option>
+                </select>
+                
+                <select id="severityFilter">
+                    <option value="">All Severities</option>
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                </select>
+                
+                <select id="exploitFilter">
+                    <option value="">All Exploit Status</option>
+                    <option value="active">Active Exploitation</option>
+                    <option value="poc">PoC Available</option>
+                    <option value="none">None</option>
+                </select>
+
+                <label class="checkbox-label">
+                    <input type="checkbox" id="kevFilter" />
+                    KEV Only
+                </label>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-value" id="totalCount">0</span>
+                <span class="stat-label">Total CVEs</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="filteredCount">0</span>
+                <span class="stat-label">Showing</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="loadedCount">0</span>
+                <span class="stat-label">Loaded</span>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading CVE data...</p>
+        </div>
+
+        <div class="table-container">
+            <table id="cveTable">
+                <thead>
+                    <tr>
+                        <th data-sort="cveId">CVE ID</th>
+                        <th data-sort="severity">Severity</th>
+                        <th data-sort="score">CVSS Score</th>
+                        <th data-sort="vendor">Vendor/Product</th>
+                        <th data-sort="description">Description</th>
+                        <th data-sort="exploitation">Exploitation</th>
+                        <th data-sort="published">Published</th>
+                        <th>KEV</th>
+                    </tr>
+                </thead>
+                <tbody id="cveTableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination">
+            <button id="prevPage" disabled>Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button id="nextPage">Next</button>
+            <select id="pageSize">
+                <option value="25">25 per page</option>
+                <option value="50" selected>50 per page</option>
+                <option value="100">100 per page</option>
+                <option value="200">200 per page</option>
+            </select>
+        </div>
+
+        <footer>
+            <p>Data source: <a href="https://github.com/cisagov/vulnrichment" target="_blank">CISA Vulnrichment</a></p>
+            <p>Learn more about <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank">CISA's Known Exploited Vulnerabilities Catalog</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

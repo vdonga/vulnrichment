@@ -6,6 +6,18 @@ Producers and consumers of this CVE data should already be familiar with the cur
 
 This project is under active development, so keep an eye on this [README.md](https://github.com/cisagov/vulnrichment/blob/develop/README.md) for updates.
 
+## 🌐 Web Viewer
+
+**NEW!** Browse and search CVE data with our interactive web viewer: [View Live Demo →](https://vdonga.github.io/vulnrichment/)
+
+Features:
+- 📊 Browse CVEs in an interactive table
+- 🔍 Search and filter by severity, year, exploitation status, and KEV
+- 📱 Responsive design for desktop and mobile
+- ⚡ Fast, client-side filtering and sorting
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for setup instructions.
+
 ## How it works
 
 First, CISA will take each CVE through an SSVC scoring process.
