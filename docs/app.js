@@ -42,16 +42,20 @@ async function loadComparisonData() {
     try {
         // Load metadata first
         updateLoadingProgress('Loading metadata...');
-        const metaResponse = await fetch('comparison-metadata.json?v=2');
+        const metaResponse = await fetch('comparison-metadata.json?v=3');
         if (!metaResponse.ok) throw new Error('Failed to load metadata');
         metadata = await metaResponse.json();
         
         console.log('Metadata loaded:', metadata);
+        updateLoadingProgress(`Found ${metadata.total.toLocaleString()} CVEs across ${metadata.pages} pages`);
+        
+        // Small delay to show the message
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Load first 5 pages
         const initialPages = Math.min(5, metadata.pages);
         for (let i = 1; i <= initialPages; i++) {
-            updateLoadingProgress(`Loading initial data... (${i}/${initialPages} pages)`);
+            updateLoadingProgress(`Loading initial data: ${allComparisons.length.toLocaleString()} / ${metadata.total.toLocaleString()} CVEs (page ${i}/${initialPages})`);
             await loadPage(i);
         }
         
@@ -60,6 +64,9 @@ async function loadComparisonData() {
         populateYearFilter();
         updateStats();
         renderTable();
+        
+        updateLoadingProgress(`Loaded ${allComparisons.length.toLocaleString()} CVEs. Loading remaining data in background...`);
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         document.getElementById('loading').style.display = 'none';
         
@@ -80,6 +87,9 @@ function updateLoadingProgress(message) {
     const progressEl = document.getElementById('loadingProgress');
     if (progressEl) {
         progressEl.textContent = message;
+        console.log('Loading progress:', message);
+    } else {
+        console.warn('loadingProgress element not found');
     }
 }
 
