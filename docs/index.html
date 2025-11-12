@@ -3,24 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CISA Vulnrichment Viewer</title>
+    <title>CISA vs NVD Quality Dashboard</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Modal for raw JSON/CPE data -->
+    <div id="jsonModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeJsonModal()">&times;</span>
+            <h3 id="modalTitle">Raw Data</h3>
+            <pre id="jsonContent"></pre>
+        </div>
+    </div>
+
     <div class="container">
         <header>
-            <h1>🛡️ CISA Vulnrichment Viewer</h1>
-            <p class="subtitle">Browse and search CVE vulnerability data enriched by CISA</p>
+            <h1>CISA vs NVD Quality Dashboard</h1>
+            <p class="subtitle">Comparing CVE data quality between CISA and NVD</p>
         </header>
 
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search CVE ID, description, vendor..." />
+                <input type="text" id="searchInput" placeholder="Search CVE ID, description, vendor, product..." />
             </div>
             
             <div class="filters">
                 <select id="yearFilter">
                     <option value="">All Years</option>
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
                 </select>
                 
                 <select id="severityFilter">
@@ -30,76 +41,72 @@
                     <option value="MEDIUM">Medium</option>
                     <option value="LOW">Low</option>
                 </select>
-                
-                <select id="exploitFilter">
-                    <option value="">All Exploit Status</option>
-                    <option value="active">Active Exploitation</option>
-                    <option value="poc">PoC Available</option>
-                    <option value="none">None</option>
-                </select>
-
-                <label class="checkbox-label">
-                    <input type="checkbox" id="kevFilter" />
-                    KEV Only
-                </label>
             </div>
         </div>
 
+        <!-- Summary Statistics -->
         <div class="stats">
             <div class="stat-card">
                 <span class="stat-value" id="totalCount">0</span>
                 <span class="stat-label">Total CVEs</span>
             </div>
             <div class="stat-card">
-                <span class="stat-value" id="filteredCount">0</span>
-                <span class="stat-label">Showing</span>
+                <span class="stat-value" id="scoreCount">0/0</span>
+                <span class="stat-label">CISA / NVD Scores</span>
             </div>
             <div class="stat-card">
-                <span class="stat-value" id="loadedCount">0</span>
-                <span class="stat-label">Loaded</span>
+                <span class="stat-value" id="productCount">0/0</span>
+                <span class="stat-label">CISA / NVD Products</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="coverageWins">0/0</span>
+                <span class="stat-label">CISA / NVD Coverage Wins</span>
             </div>
         </div>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Loading CVE data...</p>
+            <p>Loading comparison data...</p>
         </div>
 
+        <!-- Coverage Filter Toggle -->
+        <div class="coverage-filter">
+            <button class="toggle-btn active" data-filter="all">All</button>
+            <button class="toggle-btn" data-filter="cisa">CISA Wins</button>
+            <button class="toggle-btn" data-filter="nvd">NVD Wins</button>
+        </div>
+
+        <!-- Comparison Table -->
         <div class="table-container">
-            <table id="cveTable">
+            <table>
                 <thead>
                     <tr>
-                        <th data-sort="cveId">CVE ID</th>
-                        <th data-sort="severity">Severity</th>
-                        <th data-sort="score">CVSS Score</th>
-                        <th data-sort="vendor">Vendor/Product</th>
-                        <th data-sort="description">Description</th>
-                        <th data-sort="exploitation">Exploitation</th>
-                        <th data-sort="published">Published</th>
-                        <th>KEV</th>
+                        <th>CVE ID</th>
+                        <th>Year</th>
+                        <th>CISA Score</th>
+                        <th>NVD Score</th>
+                        <th>Match?</th>
+                        <th>CISA Products</th>
+                        <th>NVD CPEs</th>
+                        <th>Better Coverage</th>
                     </tr>
                 </thead>
-                <tbody id="cveTableBody">
-                    <!-- Data will be populated by JavaScript -->
+                <tbody id="tableBody">
+                    <!-- Rows will be populated by JavaScript -->
                 </tbody>
             </table>
         </div>
 
+        <!-- Pagination -->
         <div class="pagination">
-            <button id="prevPage" disabled>Previous</button>
-            <span id="pageInfo">Page 1</span>
-            <button id="nextPage">Next</button>
-            <select id="pageSize">
-                <option value="25">25 per page</option>
-                <option value="50" selected>50 per page</option>
-                <option value="100">100 per page</option>
-                <option value="200">200 per page</option>
-            </select>
+            <button id="prevPage" disabled>← Previous</button>
+            <span id="pageInfo">Page 1 of 1</span>
+            <button id="nextPage" disabled>Next →</button>
         </div>
 
         <footer>
-            <p>Data source: <a href="https://github.com/cisagov/vulnrichment" target="_blank">CISA Vulnrichment</a></p>
-            <p>Learn more about <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank">CISA's Known Exploited Vulnerabilities Catalog</a></p>
+            <p>Comparing data from <a href="https://github.com/cisagov/vulnrichment" target="_blank">CISA Vulnrichment</a> 
+            and <a href="https://nvd.nist.gov/" target="_blank">NVD</a></p>
         </footer>
     </div>
 
