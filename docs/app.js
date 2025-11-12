@@ -41,6 +41,7 @@ function setupEventListeners() {
 async function loadComparisonData() {
     try {
         // Load metadata first
+        updateLoadingProgress('Loading metadata...');
         const metaResponse = await fetch('comparison-metadata.json?v=2');
         if (!metaResponse.ok) throw new Error('Failed to load metadata');
         metadata = await metaResponse.json();
@@ -48,7 +49,9 @@ async function loadComparisonData() {
         console.log('Metadata loaded:', metadata);
         
         // Load first 5 pages
-        for (let i = 1; i <= Math.min(5, metadata.pages); i++) {
+        const initialPages = Math.min(5, metadata.pages);
+        for (let i = 1; i <= initialPages; i++) {
+            updateLoadingProgress(`Loading initial data... (${i}/${initialPages} pages)`);
             await loadPage(i);
         }
         
@@ -65,9 +68,18 @@ async function loadComparisonData() {
     } catch (error) {
         console.error('Error loading data:', error);
         document.getElementById('loading').innerHTML = `
-            <p style="color: red;">Error loading comparison data: ${error.message}</p>
-            <p>Check browser console for details.</p>
+            <div class="spinner" style="border-top-color: #dc3545;"></div>
+            <p class="loading-text" style="color: #dc3545;">Error loading comparison data: ${error.message}</p>
+            <p style="color: #666; font-size: 0.9em;">Check browser console for details.</p>
         `;
+    }
+}
+
+// Update loading progress message
+function updateLoadingProgress(message) {
+    const progressEl = document.getElementById('loadingProgress');
+    if (progressEl) {
+        progressEl.textContent = message;
     }
 }
 
